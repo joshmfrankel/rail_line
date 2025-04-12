@@ -4,7 +4,7 @@ _Get your code in line_
 
 RailLine provides a simple interface for implementing Railway Oriented Programming adapted for Ruby.
 
-## Installation
+# Installation
 
 Add this line to your application's Gemfile:
 
@@ -12,9 +12,13 @@ Add this line to your application's Gemfile:
 gem 'rail_line'
 ```
 
-## Usage
+Run `bundle install` to install the gem.
 
-In order to utilize RailLine, include the `RailLine::ResultDo` module in your class and utilize the `handle_result` method to wrap your business logic.
+Profit.
+
+# Usage
+
+In order to utilize RailLine, include the `RailLine::ResultDo` module in your class and wrap your business logic with the `handle_result` method.
 
 ```ruby
 class MyAwesomeService
@@ -30,20 +34,24 @@ class MyAwesomeService
 end
 ```
 
-Then within the calling object you receive a `RailLine::Success` or `RailLine::Failure` object with a clean interface for handling the result.
+Now within the calling object you will always receive either `RailLine::Success` or `RailLine::Failure` object with a clean interface for handling the result.
+
+- `success?` - Returns true if the result is a success
+- `failure?` - Returns true if the result is a failure
+- `payload` - Returns the optional payload of the result
+- `message` - Returns the optional message of the result
+
+`.success?` and `.failure?` work well with conditional rendering.
 
 ```ruby
 result = MyAwesomeService.new.call
 
 if result.success?
-  # Do something with the result
   render json: {
     success: true,
-    payload: result.payload,
-    message: result.message
+    payload: result.payload
   }
 elsif result.failure?
-  # Do something with the failure
   render json: {
     success: false,
     payload: result.payload,
@@ -51,6 +59,74 @@ elsif result.failure?
   }
 end
 ```
+
+## Exception Handling
+
+Additionally, anytime `RailLine::Failure` is instantiated or a `StandardError` is raised, the failure will be raised to the top of the calling stack. This ensures that processing halts and the failure propagates to the caller.
+
+```ruby
+# StandardError Example
+class MyAwesomeService
+  include RailLine::ResultDo
+
+  def call
+    handle_result do
+      record.update!(some_attribute: "invalid value")
+
+      RailLine::Success.new(message: "MyAwesomeService worked!")
+    end
+  end
+end
+
+# OR
+
+# RailLine::Failure Example
+class MyAwesomeService
+  include RailLine::ResultDo
+
+  def call
+    handle_result do
+      RailLine::Failure.new(message: "MyAwesomeService failed!") if some_failure_condition
+
+      RailLine::Success.new(message: "MyAwesomeService worked!")
+    end
+  end
+end
+```
+
+In the above example, if `record.update!(some_attribute: "invalid value")` raises a `StandardError`, handle_result will immediately return a `RailLine::Failure` object with the error details. This avoids calling the ending `RailLine::Success.new(message: "MyAwesomeService worked!")`.
+
+### Nested Exceptions
+
+Exception handling also works for nested objects.
+
+```ruby
+class MyAwesomeService
+  include RailLine::ResultDo
+
+  def call
+    handle_result do
+      MyAwesomeNestedService.new.call
+
+      RailLine::Success.new(message: "MyAwesomeService worked!")
+    end
+  end
+end
+
+class MyAwesomeNestedService
+  include RailLine::ResultDo
+
+  def call
+    handle_result do
+      record.update!(some_attribute: "invalid value")
+
+      RailLine::Success.new(message: "MyAwesomeNestedService worked!")
+    end
+  end
+end
+```
+
+In the above scenario, the `MyAwesomeNestedService` raising a `StandardError` will immediately halt processing and bubble the failure up to the `MyAwesomeService`.
 
 ### Automatic RailLine
 
@@ -62,6 +138,7 @@ class MyAwesomeService
 
   def call
     # Automatically wrapped within handle_result
+    RailLine::Success.new(message: "MyAwesomeService worked!")
   end
 end
 ```
@@ -80,7 +157,7 @@ Likely not. There are other great gems out there which implement these methods. 
 
 2. How does this compare to other gems?
 
-There are other gems out there which more fully implement traditional Railway Oriented Programming concepts. For example, [dry-monads](https://github.com/dry-rb/dry-monads) is a popular choice. RailLine was inspired by these great gems as a simple alternative.
+There are other gems out there which more fully implement traditional Railway Oriented Programming concepts. For example, [dry-monads](https://github.com/dry-rb/dry-monads) is a popular choice. RailLine was inspired by this great gem as a simple alternative.
 
 3. How can I debug exceptions not explictly called via RailLine::Failure?
 

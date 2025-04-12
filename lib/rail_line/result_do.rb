@@ -1,6 +1,22 @@
 # frozen_string_literal: true
 
 module RailLine
+  # Utilized for enabling RailLine functionality
+  #
+  # Use include RailLine::ResultDo or include RailLine::ResultDo[:method_name]
+  # to include handle_result functionality.
+  #
+  # @example
+  #   class MyService
+  #     include RailLine::ResultDo
+  #
+  #     def call
+  #       handle_result do
+  #         # Your service logic here
+  #         RailLine::Success.new(message: "It worked!")
+  #       end
+  #     end
+  #   end
   module ResultDo
     def self.included(base)
       base.extend(ClassMethods)
@@ -39,6 +55,8 @@ module RailLine
     end
 
     module ClassMethods
+      # @yield The block to execute
+      # @return [RailLine::Failure, RailLine::Success] The result of the block
       def handle_result
         ThreadContext.depth_increment
 
@@ -55,18 +73,24 @@ module RailLine
 
       private
 
+      # @param result [RailLine::BaseResult] The result to handle
+      # @return [RailLine::Success] The result of the block
       def handle_success(result)
         return result if result.is_a?(RailLine::BaseResult)
 
         RailLine::Success.new(payload: { return: result }, message: result.to_s)
       end
 
+      # @param exception [RailLine::FailureError] The exception to handle
+      # @return [RailLine::Failure] The result of the block
       def handle_failure(exception)
         raise exception if ThreadContext.nested_depth?
 
         exception.result
       end
 
+      # @param exception [StandardError] The exception to handle
+      # @return [RailLine::Failure] The result of the block
       def handle_standard_error(exception)
         raise exception if ThreadContext.nested_depth?
 
@@ -86,12 +110,15 @@ module RailLine
         )
       end
 
+      # Handles depth decrement and cleanup
       def handle_ensure
         ThreadContext.depth_decrement
         ThreadContext.cleanup if ThreadContext.cleanup?
       end
     end
 
+    # @yield The block to execute
+    # @return [RailLine::Failure, RailLine::Success] The result of the block
     def handle_result(&block)
       self.class.handle_result(&block)
     end

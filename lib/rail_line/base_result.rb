@@ -4,6 +4,8 @@ module RailLine
   class BaseResult
     attr_reader :payload, :message
 
+    # @param payload [Hash] The payload of the result
+    # @param message [String] The message of the result
     def initialize(payload: {}, message: nil)
       @payload = payload
       @message = message
@@ -11,6 +13,7 @@ module RailLine
       handle_failure
     end
 
+    # @return [Boolean] Returns true if the result is a failure
     def failure?
       !success?
     end
