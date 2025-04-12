@@ -40,7 +40,7 @@ module RailLine
 
     module ClassMethods
       def handle_result
-        ThreadContext.depth += 1
+        ThreadContext.depth_increment
 
         begin
           handle_success(yield)
@@ -87,8 +87,8 @@ module RailLine
       end
 
       def handle_ensure
-        ThreadContext.depth -= 1
-        ThreadContext.cleanup if ThreadContext.depth <= 0
+        ThreadContext.depth_decrement
+        ThreadContext.cleanup if ThreadContext.cleanup?
       end
     end
 

@@ -113,6 +113,42 @@ class DummyExceptionHandlingService
   end
 end
 
+class DummyManualParentExceptionService
+  include RailLine::ResultDo
+
+  def self.call
+    handle_result do
+      DummyManualChildExceptionService.call
+
+      RailLine::Failure.new(message: "CLASS: Not reached")
+    end
+  end
+
+  def call
+    handle_result do
+      DummyManualChildExceptionService.new.call
+
+      RailLine::Failure.new(message: "INSTANCE: Not reached")
+    end
+  end
+end
+
+class DummyManualChildExceptionService
+  include RailLine::ResultDo
+
+  def self.call
+    handle_result do
+      raise StandardError.new("CLASS: Manual Dummy exception")
+    end
+  end
+
+  def call
+    handle_result do
+      raise StandardError.new("INSTANCE: Manual Dummy exception")
+    end
+  end
+end
+
 class DummyAutomaticSuccessHandlingService
   include RailLine::ResultDo[:call]
 
@@ -245,137 +281,159 @@ RSpec.describe RailLine do
     expect(RailLine::VERSION).not_to be nil
   end
 
-  context "when no result object is returned" do
-    context "for class methods" do
-      it "returns a success" do
-        result = DummyDefaultService.call
+  context "for explicit handling" do
+    context "when no result object is returned" do
+      context "for class methods" do
+        it "returns a success" do
+          result = DummyDefaultService.call
 
-        expect(result).to be_a(RailLine::Success)
-        expect(result.message).to eq("CLASS: Hello, world!")
+          expect(result).to be_a(RailLine::Success)
+          expect(result.message).to eq("CLASS: Hello, world!")
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a success" do
+          result = DummyDefaultService.new.call
+
+          expect(result).to be_a(RailLine::Success)
+          expect(result.message).to eq("INSTANCE: Hello, world!")
+        end
       end
     end
 
-    context "for instance methods" do
-      it "returns a success" do
-        result = DummyDefaultService.new.call
+    context "when a success result object is returned" do
+      context "for class methods" do
+        it "returns a success" do
+          result = DummySuccessService.call
 
-        expect(result).to be_a(RailLine::Success)
-        expect(result.message).to eq("INSTANCE: Hello, world!")
+          expect(result).to be_a(RailLine::Success)
+          expect(result.message).to eq("CLASS: Success message")
+          expect(result.success?).to be_truthy
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a success" do
+          result = DummySuccessService.new.call
+
+          expect(result).to be_a(RailLine::Success)
+          expect(result.message).to eq("INSTANCE: Success message")
+          expect(result.success?).to be_truthy
+        end
+      end
+    end
+
+    context "when a failure result object is returned" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyFailureService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("CLASS: Failure message")
+          expect(result.failure?).to be_truthy
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyFailureService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("INSTANCE: Failure message")
+          expect(result.failure?).to be_truthy
+        end
+      end
+    end
+
+    context "when a failure result object is returned early" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyEarlyReturnFailureService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("CLASS: Early return failure message")
+          expect(result.failure?).to be_truthy
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyEarlyReturnFailureService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("INSTANCE: Early return failure message")
+          expect(result.failure?).to be_truthy
+        end
+      end
+    end
+
+    context "when an exception is raised without a message" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyDefaultExceptionHandlingService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("StandardError: No message")
+          expect(result.failure?).to be_truthy
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyDefaultExceptionHandlingService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("StandardError: No message")
+          expect(result.failure?).to be_truthy
+        end
+      end
+    end
+
+    context "when an exception is raised" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyExceptionHandlingService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("CLASS: Dummy exception")
+          expect(result.failure?).to be_truthy
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyExceptionHandlingService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("INSTANCE: Dummy exception")
+          expect(result.failure?).to be_truthy
+        end
+      end
+    end
+
+    context "when an exception is raised from a child service" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyManualParentExceptionService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("CLASS: Manual Dummy exception")
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyManualParentExceptionService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("INSTANCE: Manual Dummy exception")
+        end
       end
     end
   end
 
-  context "when a success result object is returned" do
-    context "for class methods" do
-      it "returns a success" do
-        result = DummySuccessService.call
-
-        expect(result).to be_a(RailLine::Success)
-        expect(result.message).to eq("CLASS: Success message")
-        expect(result.success?).to be_truthy
-      end
-    end
-
-    context "for instance methods" do
-      it "returns a success" do
-        result = DummySuccessService.new.call
-
-        expect(result).to be_a(RailLine::Success)
-        expect(result.message).to eq("INSTANCE: Success message")
-        expect(result.success?).to be_truthy
-      end
-    end
-  end
-
-  context "when a failure result object is returned" do
-    context "for class methods" do
-      it "returns a failure" do
-        result = DummyFailureService.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("CLASS: Failure message")
-        expect(result.failure?).to be_truthy
-      end
-    end
-
-    context "for instance methods" do
-      it "returns a failure" do
-        result = DummyFailureService.new.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("INSTANCE: Failure message")
-        expect(result.failure?).to be_truthy
-      end
-    end
-  end
-
-  context "when a failure result object is returned early" do
-    context "for class methods" do
-      it "returns a failure" do
-        result = DummyEarlyReturnFailureService.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("CLASS: Early return failure message")
-        expect(result.failure?).to be_truthy
-      end
-    end
-
-    context "for instance methods" do
-      it "returns a failure" do
-        result = DummyEarlyReturnFailureService.new.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("INSTANCE: Early return failure message")
-        expect(result.failure?).to be_truthy
-      end
-    end
-  end
-
-  context "when an exception is raised without a message" do
-    context "for class methods" do
-      it "returns a failure" do
-        result = DummyDefaultExceptionHandlingService.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("StandardError: No message")
-        expect(result.failure?).to be_truthy
-      end
-    end
-
-    context "for instance methods" do
-      it "returns a failure" do
-        result = DummyDefaultExceptionHandlingService.new.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("StandardError: No message")
-        expect(result.failure?).to be_truthy
-      end
-    end
-  end
-
-  context "when an exception is raised" do
-    context "for class methods" do
-      it "returns a failure" do
-        result = DummyExceptionHandlingService.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("CLASS: Dummy exception")
-        expect(result.failure?).to be_truthy
-      end
-    end
-
-    context "for instance methods" do
-      it "returns a failure" do
-        result = DummyExceptionHandlingService.new.call
-
-        expect(result).to be_a(RailLine::Failure)
-        expect(result.message).to eq("INSTANCE: Dummy exception")
-        expect(result.failure?).to be_truthy
-      end
-    end
-  end
-
-  context "when using automatic handling" do
+  context "for automatic handling" do
     context "for success" do
       context "for class methods" do
         it "returns a success" do
