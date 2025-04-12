@@ -6,6 +6,19 @@ module RailLine
       base.extend(ClassMethods)
     end
 
+    # Enables the use of the automatic handling of results.
+    #
+    # @example
+    #   class MyAwesomeService
+    #     include RailLine::ResultDo[:call]
+    #
+    #     def call
+    #       # ...
+    #     end
+    #   end
+    #
+    # @param method_names [Array<Symbol>] The names of the methods to wrap.
+    # @return [Module] The module that wraps the methods.
     def self.[](*method_names)
       Module.new do
         define_singleton_method(:included) do |base|
@@ -25,57 +38,57 @@ module RailLine
       end
     end
 
-    def self.depth
-      Thread.current[:rail_line_depth] ||= 0
-    end
-
-    def self.depth=(value)
-      Thread.current[:rail_line_depth] = value
-    end
-
-    def self.cleanup
-      Thread.current[:rail_line_depth] = nil
-    end
-
-    def self.nested_depth?
-      depth > 1
-    end
-
     module ClassMethods
       def handle_result
-        RailLine::ResultDo.depth += 1
+        ThreadContext.depth += 1
 
         begin
-          result = yield
-
-          return result if result.is_a?(RailLine::BaseResult)
-
-          RailLine::Success.new(payload: { return: result }, message: result.to_s)
+          handle_success(yield)
         rescue RailLine::FailureError => exception
-          raise exception if RailLine::ResultDo.nested_depth?
-
-          exception.result
+          handle_failure(exception)
         rescue StandardError => exception
-          raise exception if RailLine::ResultDo.nested_depth?
-
-          message = if exception.message.empty? || exception.message == "StandardError"
-            "StandardError: No message"
-          else
-            exception.message
-          end
-
-          RailLine::Failure.new(
-            payload: {
-              exception:,
-              backtrace: exception.backtrace
-            },
-            message:,
-            raise_error: false
-          )
+          handle_standard_error(exception)
         ensure
-          RailLine::ResultDo.depth -= 1
-          ResultDo.cleanup if ResultDo.depth <= 0
+          handle_ensure
         end
+      end
+
+      private
+
+      def handle_success(result)
+        return result if result.is_a?(RailLine::BaseResult)
+
+        RailLine::Success.new(payload: { return: result }, message: result.to_s)
+      end
+
+      def handle_failure(exception)
+        raise exception if ThreadContext.nested_depth?
+
+        exception.result
+      end
+
+      def handle_standard_error(exception)
+        raise exception if ThreadContext.nested_depth?
+
+        message = if exception.message.empty? || exception.message == "StandardError"
+          "StandardError: No message"
+        else
+          exception.message
+        end
+
+        RailLine::Failure.new(
+          payload: {
+            exception:,
+            backtrace: exception.backtrace
+          },
+          message:,
+          raise_error: false
+        )
+      end
+
+      def handle_ensure
+        ThreadContext.depth -= 1
+        ThreadContext.cleanup if ThreadContext.depth <= 0
       end
     end
 

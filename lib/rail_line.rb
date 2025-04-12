@@ -6,6 +6,7 @@ require_relative "rail_line/base_result"
 require_relative "rail_line/success"
 require_relative "rail_line/failure"
 require_relative "rail_line/result_do"
+require_relative "rail_line/result_do/thread_context"
 
 module RailLine
 end
