@@ -19,3 +19,9 @@ Metrics/MethodLength:
 Metrics/BlockLength:
   Exclude:
     - spec/**/*.rb
+
+Naming/RescuedExceptionsVariableName:
+  PreferredName: exception
+
+Layout/EndAlignment:
+  EnforcedStyleAlignWith: variable

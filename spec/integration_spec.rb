@@ -184,6 +184,60 @@ class DummyChildService
     RailLine::Failure.new(message: "INSTANCE: DummyChildService")
   end
 end
+
+class DummyParentExceptionService
+  include RailLine::ResultDo[:call]
+
+  def self.call
+    DummyChildExceptionService.call
+
+    RailLine::Failure.new(message: "CLASS: Not reached")
+  end
+
+  def call
+    DummyChildExceptionService.new.call
+
+    RailLine::Failure.new(message: "INSTANCE: Not reached")
+  end
+end
+
+class DummyChildExceptionService
+  include RailLine::ResultDo[:call]
+
+  def self.call
+    raise StandardError.new("CLASS: Automated Dummy exception")
+  end
+
+  def call
+    raise StandardError.new("INSTANCE: Automated Dummy exception")
+  end
+end
+
+class DummyParentHandlerOnlyService
+  include RailLine::ResultDo[:call]
+
+  def self.call
+    DummyChildWithoutHandlerService.call
+
+    RailLine::Failure.new(message: "CLASS: Not reached")
+  end
+
+  def call
+    DummyChildWithoutHandlerService.new.call
+
+    RailLine::Failure.new(message: "INSTANCE: Not reached")
+  end
+end
+
+class DummyChildWithoutHandlerService
+  def self.call
+    raise StandardError.new("CLASS: Automated Dummy Without Handler exception")
+  end
+
+  def call
+    raise StandardError.new("INSTANCE: Automated Dummy Without Handler exception")
+  end
+end
 # rubocop:enable Lint/UnreachableCode
 
 RSpec.describe RailLine do
@@ -398,6 +452,46 @@ RSpec.describe RailLine do
 
           expect(result).to be_a(RailLine::Failure)
           expect(result.message).to eq("INSTANCE: DummyChildService")
+        end
+      end
+    end
+
+    context "when an exception is raised from a child service" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyParentExceptionService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("CLASS: Automated Dummy exception")
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyParentExceptionService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("INSTANCE: Automated Dummy exception")
+        end
+      end
+    end
+
+    context "when a failure is raised from a child service that only the parent service has a handler for" do
+      context "for class methods" do
+        it "returns a failure" do
+          result = DummyParentHandlerOnlyService.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("CLASS: Automated Dummy Without Handler exception")
+        end
+      end
+
+      context "for instance methods" do
+        it "returns a failure" do
+          result = DummyParentHandlerOnlyService.new.call
+
+          expect(result).to be_a(RailLine::Failure)
+          expect(result.message).to eq("INSTANCE: Automated Dummy Without Handler exception")
         end
       end
     end

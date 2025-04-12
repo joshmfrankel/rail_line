@@ -37,6 +37,10 @@ module RailLine
       Thread.current[:rail_line_depth] = nil
     end
 
+    def self.nested_depth?
+      depth > 1
+    end
+
     module ClassMethods
       def handle_result
         RailLine::ResultDo.depth += 1
@@ -47,13 +51,27 @@ module RailLine
           return result if result.is_a?(RailLine::BaseResult)
 
           RailLine::Success.new(payload: { return: result }, message: result.to_s)
-        rescue RailLine::FailureError => e
-          raise if RailLine::ResultDo.depth > 1
+        rescue RailLine::FailureError => exception
+          raise exception if RailLine::ResultDo.nested_depth?
 
-          e.result
-        rescue StandardError => e
-          message = e.message.empty? || e.message == "StandardError" ? "StandardError: No message" : e.message
-          RailLine::Failure.new(payload: { exception: e, backtrace: e.backtrace }, message:, raise_error: false)
+          exception.result
+        rescue StandardError => exception
+          raise exception if RailLine::ResultDo.nested_depth?
+
+          message = if exception.message.empty? || exception.message == "StandardError"
+            "StandardError: No message"
+          else
+            exception.message
+          end
+
+          RailLine::Failure.new(
+            payload: {
+              exception:,
+              backtrace: exception.backtrace
+            },
+            message:,
+            raise_error: false
+          )
         ensure
           RailLine::ResultDo.depth -= 1
           ResultDo.cleanup if ResultDo.depth <= 0
