@@ -9,7 +9,8 @@ Gem::Specification.new do |spec|
   spec.email = ["joshmfrankel@gmail.com"]
 
   spec.summary = "A simple interface for basic Railway Oriented Programming in Ruby."
-  spec.description = "Get your code in line. RailLine provides a simple interface for basic Railway Oriented Programming adapted for Ruby."
+  spec.description = "Get your code in line. RailLine provides a simple interface for" \
+    "basic Railway Oriented Programming adapted for Ruby."
   spec.homepage = "https://github.com/joshmfrankel/rail_line"
   spec.required_ruby_version = ">= 3.1.0"
   spec.license = "Apache-2.0"
