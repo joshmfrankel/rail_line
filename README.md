@@ -1,5 +1,7 @@
 # RailLine
 
+[![Ruby](https://github.com/joshmfrankel/rail_line/actions/workflows/main.yml/badge.svg)](https://github.com/joshmfrankel/rail_line/actions/workflows/main.yml)
+
 _Get your code in line_
 
 RailLine provides a simple interface for implementing Railway Oriented Programming adapted for Ruby.
