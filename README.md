@@ -1,6 +1,7 @@
 # RailLine
 
 [![Ruby](https://github.com/joshmfrankel/rail_line/actions/workflows/main.yml/badge.svg)](https://github.com/joshmfrankel/rail_line/actions/workflows/main.yml)
+[![Gem Version](https://badge.fury.io/rb/rail_line.svg?icon=si%3Arubygems&icon_color=%23959da5)](https://badge.fury.io/rb/rail_line)
 
 _Get your code in line_
 
